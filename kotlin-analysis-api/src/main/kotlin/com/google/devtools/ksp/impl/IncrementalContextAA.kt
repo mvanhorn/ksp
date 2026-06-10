@@ -115,23 +115,28 @@ class IncrementalContextAA(
                 val fqn = type.classId.asFqNameString()
                 recordLookup(file, fqn)
             }
+
             is KaFlexibleType -> {
                 recordWithArgs(type.lowerBound, file)
                 recordWithArgs(type.upperBound, file)
             }
+
             is KaIntersectionType -> {
                 type.conjuncts.forEach {
                     recordWithArgs(it, file)
                 }
             }
+
             is KaCapturedType -> {
                 type.projection.type?.let {
                     recordWithArgs(it, file)
                 }
             }
+
             is KaDefinitelyNotNullType -> {
                 recordWithArgs(type.original, file)
             }
+
             is KaErrorType, is KaDynamicType, is KaTypeParameterType -> {}
         }
     }

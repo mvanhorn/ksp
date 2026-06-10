@@ -17,6 +17,7 @@
 
 package com.google.devtools.ksp.common
 
+import com.google.devtools.ksp.impl.IncrementalContextAA
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSDeclaration
 import com.google.devtools.ksp.symbol.KSDeclarationContainer
@@ -172,6 +173,23 @@ abstract class IncrementalContextBase(
         logFile.appendText("\n")
     }
 
+    private fun logLookupGraph() {
+        if (!incrementalLog) {
+            return
+        }
+        if (this !is IncrementalContextAA) {
+            return
+        }
+
+        val logFile = File(logsDir, "kspLookupGraph.log")
+        logFile.appendText("=== Build $buildTime ===\n")
+        dumpLookupRecords().forEach { (fqn, paths) ->
+            paths.forEach {
+                logFile.appendText("$fqn -> $it\n")
+            }
+        }
+    }
+
     private fun logDirtyFiles(
         files: Collection<KSFile>,
         allFiles: Collection<KSFile>,
@@ -318,6 +336,7 @@ abstract class IncrementalContextBase(
         }
 
         logSourceToOutputs(outputs, sourceToOutputs)
+        logLookupGraph()
 
         sourceToOutputsMap.flush()
     }
