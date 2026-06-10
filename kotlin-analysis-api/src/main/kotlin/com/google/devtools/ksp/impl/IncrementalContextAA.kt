@@ -87,13 +87,19 @@ class IncrementalContextAA(
 
     private val symbolLookupCacheDir = File(cachesDir, "symbolLookups")
     override val symbolLookupTracker =
-        LookupTrackerWrapperImpl((lookupTracker as? DualLookupTracker)?.symbolTracker ?: LookupTracker.DO_NOTHING)
+        LookupTrackerWrapperImpl(
+            (lookupTracker as? DualLookupTracker)?.symbolTracker ?: LookupTracker.DO_NOTHING,
+            incrementalLog
+        )
     override val symbolLookupCache = LookupStorageWrapperImpl(LookupStorage(symbolLookupCacheDir, icContext))
 
     // TODO: rewrite LookupStorage to share file-to-id, etc.
     private val classLookupCacheDir = File(cachesDir, "classLookups")
     override val classLookupTracker =
-        LookupTrackerWrapperImpl((lookupTracker as? DualLookupTracker)?.classTracker ?: LookupTracker.DO_NOTHING)
+        LookupTrackerWrapperImpl(
+            (lookupTracker as? DualLookupTracker)?.classTracker ?: LookupTracker.DO_NOTHING,
+            incrementalLog
+        )
     override val classLookupCache = LookupStorageWrapperImpl(LookupStorage(classLookupCacheDir, icContext))
 
     // Debugging and testing only.
@@ -270,7 +276,7 @@ internal fun recordGetSealedSubclasses(classDeclaration: KSClassDeclaration) {
     }
 }
 
-class LookupTrackerWrapperImpl(val lookupTracker: LookupTracker) : LookupTrackerWrapper {
+class LookupTrackerWrapperImpl(val lookupTracker: LookupTracker, val incrementalLog: Boolean) : LookupTrackerWrapper {
     override val lookups: MultiMap<LookupSymbolWrapper, String>
         get() = MultiMap<LookupSymbolWrapper, String>().also { wrapper ->
             (lookupTracker as LookupTrackerImpl).lookups.entrySet().forEach { e ->
@@ -279,6 +285,9 @@ class LookupTrackerWrapperImpl(val lookupTracker: LookupTracker) : LookupTracker
         }
 
     override fun record(filePath: String, scopeFqName: String, name: String) {
+        if (incrementalLog) {
+            println("LookupTrackerWrapperImpl.record: $filePath $scopeFqName $name")
+        }
         lookupTracker.record(filePath, Position.NO_POSITION, scopeFqName, ScopeKind.PACKAGE, name)
     }
 }
