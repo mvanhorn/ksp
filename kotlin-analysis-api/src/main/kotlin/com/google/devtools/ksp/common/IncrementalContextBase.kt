@@ -86,8 +86,8 @@ abstract class IncrementalContextBase(
     private val cachesUpToDateFile = File(cachesDir, "caches.uptodate")
     private val rebuild = !cachesUpToDateFile.exists()
 
-    private val logsDir = File(cachesDir, "logs").apply { mkdirs() }
-    private val buildTime = Date().time
+    protected val logsDir = File(cachesDir, "logs").apply { mkdirs() }
+    protected val buildTime = Date().time
 
     private val modified = knownModified.map { it.relativeTo(baseDir) }.toSet()
     private val removed = knownRemoved.map { it.relativeTo(baseDir) }.toSet()
@@ -141,6 +141,20 @@ abstract class IncrementalContextBase(
         classLookupCache.close()
     }
 
+    protected fun mkLogFile(fileName: String): File =
+        File(logsDir, fileName)
+            .also {
+                if (it.exists()) {
+                    println("Deleting existing file")
+                    it.delete()
+                    it.createNewFile()
+                } else {
+                    it.createNewFile()
+                }
+                println("Created new file")
+            }
+            .also { it.appendText("=== Build $buildTime ===\n") }
+
     private fun logSourceToOutputs(outputs: Set<File>, sourceToOutputs: Map<File, Set<File>>) {
         if (!incrementalLog)
             return
@@ -181,8 +195,7 @@ abstract class IncrementalContextBase(
             return
         }
 
-        val logFile = File(logsDir, "kspLookupGraph.log")
-        logFile.appendText("=== Build $buildTime ===\n")
+        val logFile = mkLogFile("kspLookupGraph.log")
         dumpLookupRecords().forEach { (fqn, paths) ->
             paths.forEach {
                 logFile.appendText("$fqn -> $it\n")

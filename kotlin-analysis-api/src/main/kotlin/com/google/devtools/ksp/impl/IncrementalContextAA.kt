@@ -86,10 +86,29 @@ class IncrementalContextAA(
     private val icContext = IncrementalCompilationContext(PATH_CONVERTER, PATH_CONVERTER, true)
 
     private val symbolLookupCacheDir = File(cachesDir, "symbolLookups")
+
+    private val symbolTrackerLogFile: File? =
+        if (this.incrementalLog) {
+            println("Creating symbol tracker log file")
+            mkLogFile("symbolTrackerTrace.log")
+        } else {
+            println("Symbol tracker log file is null")
+            null
+        }
+
+    private val classTrackerLogFile: File? =
+        if (this.incrementalLog) {
+            println("Creating enum class tracker log file")
+            mkLogFile("enumClassTrackerTrace.log")
+        } else {
+            println("Enum class tracker log file is null")
+            null
+        }
+
     override val symbolLookupTracker =
         LookupTrackerWrapperImpl(
             (lookupTracker as? DualLookupTracker)?.symbolTracker ?: LookupTracker.DO_NOTHING,
-            incrementalLog
+            symbolTrackerLogFile
         )
     override val symbolLookupCache = LookupStorageWrapperImpl(LookupStorage(symbolLookupCacheDir, icContext))
 
@@ -98,7 +117,7 @@ class IncrementalContextAA(
     override val classLookupTracker =
         LookupTrackerWrapperImpl(
             (lookupTracker as? DualLookupTracker)?.classTracker ?: LookupTracker.DO_NOTHING,
-            incrementalLog
+            classTrackerLogFile
         )
     override val classLookupCache = LookupStorageWrapperImpl(LookupStorage(classLookupCacheDir, icContext))
 
@@ -276,7 +295,7 @@ internal fun recordGetSealedSubclasses(classDeclaration: KSClassDeclaration) {
     }
 }
 
-class LookupTrackerWrapperImpl(val lookupTracker: LookupTracker, val incrementalLog: Boolean) : LookupTrackerWrapper {
+class LookupTrackerWrapperImpl(val lookupTracker: LookupTracker, val trackerLogFile: File?) : LookupTrackerWrapper {
     override val lookups: MultiMap<LookupSymbolWrapper, String>
         get() = MultiMap<LookupSymbolWrapper, String>().also { wrapper ->
             (lookupTracker as LookupTrackerImpl).lookups.entrySet().forEach { e ->
@@ -285,9 +304,7 @@ class LookupTrackerWrapperImpl(val lookupTracker: LookupTracker, val incremental
         }
 
     override fun record(filePath: String, scopeFqName: String, name: String) {
-        if (incrementalLog) {
-            println("LookupTrackerWrapperImpl.record: $filePath $scopeFqName $name")
-        }
+        trackerLogFile?.appendText("$scopeFqName.$name $filePath\n")
         lookupTracker.record(filePath, Position.NO_POSITION, scopeFqName, ScopeKind.PACKAGE, name)
     }
 }
